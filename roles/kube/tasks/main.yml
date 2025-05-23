@@ -1,0 +1,26 @@
+- name: Add Kubernetes repo
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | gpg --yes --dearmor -o /etc/apt/keyrings/kubernetes.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" > /etc/apt/sources.list.d/kubernetes.list
+  args:
+    executable: /bin/bash
+
+- name: Install kubelet, kubeadm, kubectl
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: yes
+
+- name: Hold Kubernetes packages
+  command: apt-mark hold {{ item }}
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: Join worker to cluster
+  command: "{{ hostvars['k8s-master'].kubeadm_join_command }} --ignore-preflight-errors=all"
+  when: inventory_hostname != "k8s-master"

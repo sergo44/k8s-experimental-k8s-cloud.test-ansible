@@ -1,0 +1,16 @@
+- hosts: all
+  become: true
+  roles:
+    - common
+    - containerd
+
+- hosts: master
+  become: true
+  roles:
+    - kube
+    - flannel
+
+- hosts: workers
+  become: true
+  roles:
+    - kube

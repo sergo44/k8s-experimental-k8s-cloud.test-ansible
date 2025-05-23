@@ -1,0 +1,37 @@
+- name: Initialize Kubernetes master with kubeadm
+  command: kubeadm init --apiserver-advertise-address=192.168.1.200 --pod-network-cidr=10.244.0.0/16
+  register: kubeadm_init
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Set up kube config for root user
+  shell: |
+    mkdir -p $HOME/.kube
+    cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    chown $(id -u):$(id -g) $HOME/.kube/config
+  when: kubeadm_init is changed
+
+- name: Install Flannel CNI
+  command: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: kubeadm_init is changed
+
+- name: Generate kubeadm join command
+  command: kubeadm token create --print-join-command
+  register: join_cmd
+  changed_when: false
+  run_once: true
+  when: kubeadm_init is changed
+
+- name: Create join command
+  command: kubeadm token create --print-join-command
+  register: join_cmd
+  run_once: true
+  delegate_to: k8s-master
+
+- name: Set global fact
+  set_fact:
+    kubeadm_join_command: "{{ join_cmd.stdout }}"
+  run_once: true
+  delegate_to: localhost
