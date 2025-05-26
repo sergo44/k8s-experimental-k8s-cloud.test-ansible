@@ -23,9 +23,9 @@ Use
 ip host <доменное_имя_хоста> <адрес>
 system configuration save
 
-ip host k8b-master.k8b-cloud.test 192.168.1.200
-ip host k8b-worker1.k8b-cloud.test 192.168.1.201
-ip host k8b-worker1.k8b-cloud.test 192.168.1.202
+ip host k8s-master.k8s-cloud.test 192.168.1.200
+ip host k8s-worker1.k8s-cloud.test 192.168.1.201
+ip host k8s-worker1.k8s-cloud.test 192.168.1.202
 system configuration save
 ```
 
@@ -41,4 +41,8 @@ ssh root@192.168.1.201 'apt update && apt install -y python3 python3-apt' &&
 ssh root@192.168.1.202 'apt update && apt install -y python3 python3-apt'
 
 ansible-playbook -i inventory/hosts.ini playbook.yml --check
+
+ssh root@192.168.1.200 'reboot' &&
+ssh root@192.168.1.201 'reboot' &&
+ssh root@192.168.1.202 'reboot'
 ```

@@ -18,6 +18,12 @@
     content: "{{ containerd_config.stdout }}"
     dest: /etc/containerd/config.toml
 
+- name: Enable SystemdCgroup for containerd
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^\s*SystemdCgroup ='
+    line: '        SystemdCgroup = true'
+
 - name: Restart containerd
   service:
     name: containerd
