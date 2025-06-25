@@ -163,3 +163,157 @@ root@k8s-master:~# kubectl get storageclass
 NAME          PROVISIONER                                             RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
 nfs-storage   cluster.local/nfs-csi-nfs-subdir-external-provisioner   Retain          Immediate           true                   6m32s
 ```
+
+
+## Install GitLab
+```
+kubectl create namespace gitlab
+helm repo add gitlab https://charts.gitlab.io/
+helm repo update
+```
+
+### Create gitlab-values.yaml
+```yaml
+global:
+  hosts:
+    domain: gitlab.test
+    externalIP: 192.168.1.230
+
+  ingress:
+    configureCertmanager: false
+    tls:
+      enabled: false
+    class: nginx
+
+  storage:
+    dynamic: true
+    class: nfs-storage
+
+  kas:
+    enabled: false
+
+gitlab:
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+postgresql:
+  install: true
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: nfs-storage
+
+redis:
+  install: true
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: nfs-storage
+
+minio:
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: nfs-storage
+
+gitaly:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: nfs-storage
+
+certmanager:
+  installCertmanager: false
+
+prometheus:
+  install: false
+
+gitlab-runner:
+  install: false
+```
+
+### Patch Storage
+```shell
+kubectl patch storageclass nfs-storage \
+-p '{"metadata": {"annotations": {"storageclass.kubernetes.io/is-default-class":"true"}}}'
+```
+
+### Установка GitLab
+
+```shell
+helm upgrade --install gitlab gitlab/gitlab \
+  -f gitlab-values.yaml \
+  --namespace gitlab \
+  --create-namespace
+  
+kubectl get pods -n gitlab
+kubectl get svc -n gitlab
+kubectl get ingress -n gitlab
+```
+
+### Удаление
+```shell
+helm uninstall gitlab -n gitlab
+kubectl delete pvc -n gitlab --all
+```
+
+## Выделение IP адресов ( MetalLB )
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.10/config/manifests/metallb-native.yaml
+kubectl get pods -n metallb-system
+
+
+```
+
+### metallb-config.yaml
+
+```yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: main-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.230-192.168.1.250
+
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: main-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - main-pool
+```
+
+```bash
+kubectl apply -f metallb-config.yaml
+
+kubectl get ipaddresspools -n metallb-system
+kubectl get l2advertisements -n metallb-system
+kubectl get svc -A | grep LoadBalancer
+```
+
+
+### Add IP Ingress ?
+```bash
+
+minio.gitlab.test
+registry.gitlab.test
+gitlab.gitlab.test
+
+ip host minio.gitlab.test 192.168.1.230
+ip host registry.gitlab.test 192.168.1.230
+ip host gitlab.gitlab.test 192.168.1.230
+system configuration save
+```
