@@ -178,6 +178,8 @@ global:
   hosts:
     domain: gitlab.test
     externalIP: 192.168.1.230
+    gitlab:
+      name: gitlab.test
 
   ingress:
     configureCertmanager: false
@@ -198,11 +200,11 @@ gitlab:
     maxReplicas: 1
     resources:
       requests:
-        cpu: 250m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 2Gi
       limits:
-        cpu: 500m
-        memory: 1Gi
+        cpu: 2000m
+        memory: 4Gi
 
 postgresql:
   install: true
@@ -317,3 +319,4 @@ ip host registry.gitlab.test 192.168.1.230
 ip host gitlab.gitlab.test 192.168.1.230
 system configuration save
 ```
+
